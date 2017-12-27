@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
-import time
 
 
 class SessionController(object):
 
-    event_data = {}
-    check_count = 0
+    def __init__(self):
+        """ Creates session trackers """
+
+        self.event_data = {}
+        self.check_count = 0
 
     def event(self, event_type):
         """ Simulation of a swipe, touch or check event """
@@ -27,14 +29,17 @@ class SessionController(object):
         swipe_timeout = 3
         touch_timeout = 1
 
+        start = min(self.event_data.values())
+        end = max(self.event_data.values())
+
         if (('swipe' in self.event_data and (now - self.event_data['swipe']) < timedelta(seconds=swipe_timeout)) or
             ('touch' in self.event_data and (now - self.event_data['touch']) < timedelta(seconds=touch_timeout)) or
             ('check' in self.event_data and self.check_count % 2 != 0)):
 
             return 'Session still active'
 
-        start = min(self.event_data.values())
-        end = max(self.event_data.values())
+        elif start == end:
+            return 'Ghost session'
 
         print("Session start: {}".format(str(start)))
         print("Session end: {}".format(str(end)))
