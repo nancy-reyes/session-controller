@@ -45,3 +45,11 @@ class SessionController(object):
         print("Session end: {}".format(str(end)))
 
         return start, end
+
+    def in_progress(self):
+        """ Boolean if session is in progress """
+
+        if self.times() == 'Session still active':
+            return True
+        else:
+            return False
