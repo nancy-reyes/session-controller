@@ -2,53 +2,70 @@ from datetime import datetime, timedelta
 
 
 class SessionController(object):
-    """ Session Controller class """
+    """ Session Controller Class Object """
 
-    swipe_timeout = 3
-    touch_timeout = 1
-    sessions = {}
-    session_count = 1  # Session number
 
     def __init__(self):
-        """ Creates session trackers for Session Controller class """
+        """ Session tracker for Session Controller Class """
 
-        self.event_data = {'touch': datetime(1, 1, 1), 'swipe': datetime(1, 1, 1)}  # Track individual session data
-        self.check_count = 0
+        self.sessions = []
+        self.swipe_timeout = 3
+        self.touch_timeout = 1
+        self.event_data = {'start': None}
 
     def event(self, event_type):
-        """ Simulation of a touch, swipe or check event """
+        """ Simulation of an event """
 
         now = datetime.now()
-        print(self.event_data)
+        print(now)
 
-        # Create new session if event_data is blank
-        if self.event_data == {'touch': datetime(1, 1, 1), 'swipe': datetime(1, 1, 1)}:
+        # Records beginning of session
+        if self.event_data['start'] is None:
             self.event_data['start'] = now
-            print(self.event_data)
 
-        # Keep track of check events
-        if event_type == 'check':
-            self.check_count += 1
+        # Records timestamp for touch/swipe events
+        if event_type == 'touch':
+            self.event_data[event_type] = now + timedelta(seconds=self.touch_timeout)
+        elif event_type == 'swipe':
+            self.event_data[event_type] = now + timedelta(seconds=self.swipe_timeout)
 
-        # When session ends, add start/end to sessions dict & reset event_data
-        if (self.check_count % 2 == 0
-            and now - self.event_data['swipe'] > timedelta(seconds=self.swipe_timeout)
-            and now - self.event_data['touch'] > timedelta(seconds=self.touch_timeout)):
+        # Removes timestamp if any existing touch/swipe events have timed out
+        if 'touch' in self.event_data and now > self.event_data['touch']:
+            del self.event_data['touch']
 
-            self.sessions[self.session_count] = {}
-            print(self.sessions)
-            self.sessions[self.session_count]['start'] = self.event_data['start']
-            print(self.sessions)
-            self.sessions[self.session_count]['end'] = now
-            self.session_count += 1
-            self.event_data = {'touch': datetime(1, 1, 1), 'swipe': datetime(1, 1, 1)}
-            self.check_count = 0
+        if 'swipe' in self.event_data and now > self.event_data['swipe']:
+            del self.event_data['swipe']
 
-        # Add event to event_data
-        self.event_data[event_type] = now
+        # Check event is added if not in dict, otherwise deletes it
+        if event_type == 'check' and 'check' not in self.event_data:
+            self.event_data[event_type] = now
+        elif event_type == 'check' and 'check' in self.event_data:
+            del self.event_data['check']
+
+        # Process end of session
+        if len(self.event_data) == 1:
+            self.sessions.append((self.event_data['start'], now))
+            self.event_data = {'start': None}
+
         print(self.event_data)
 
-    def get_times(self):
-        if self.sessions:
-            for key, value in self.sessions.items():
-                print('Session {}:\nStart: {}\nEnd: {}'.format(key, value['start'], value['end']))
+    def in_progress(self):
+        """ Determines if session is still in progress """
+
+        if ('touch' in self.event_data and datetime.now() - self.event_data['touch'] < timedelta(seconds=0) or
+           'swipe' in self.event_data and datetime.now() - self.event_data['swipe'] < timedelta(seconds=0) or
+           'check' in self.event_data):
+            return True
+        else:
+            return False
+
+    def session_times(self):
+        """ Prints session times & status """
+
+        session_count = 1
+        for session in self.sessions:
+            print('Session {}:\nSession start: {}\nSession end: {}'.format(session_count, self.sessions[session_count-1][0], self.sessions[session_count-1][1]))
+            session_count += 1
+
+        if self.in_progress():
+            print('Session {} is still in progress'.format(session_count))

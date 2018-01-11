@@ -17,8 +17,8 @@ class TestSessionController(unittest.TestCase):
 
         del self.session
 
-    def test_sc_valid_session(self):
-        """ Test case #1 - valid session """
+    def test_sc_single_session(self):
+        """ Test case #1 - single session """
 
         self.session.event('swipe')
         time.sleep(2)
@@ -30,71 +30,104 @@ class TestSessionController(unittest.TestCase):
         time.sleep(3)  # touch times out
         self.session.event('check')
 
-        session_length = (self.session.sessions[1]['end'].replace(microsecond=0) -
-                          self.session.sessions[1]['start'].replace(microsecond=0))
+        session_length = (self.session.sessions[0][1].replace(microsecond=0) -
+                          self.session.sessions[0][0].replace(microsecond=0))
 
-        self.assertEqual(session_length, timedelta(seconds=9))
+        self.assertEqual(session_length, timedelta(seconds=7))
 
-    # def test_sc_unclosed_check(self):
-    #     """ Test case #2 - active session (unclosed check) """
+    def test_sc_multiple_sessions(self):
+        """ Test case #2 - multiple sessions """
 
-    #     self.session.event('swipe')
-    #     time.sleep(4)  # swipe times out
-    #     self.session.event('touch')
-    #     self.session.event('touch')
-    #     time.sleep(2)  # touch times out
-    #     self.session.event('touch')
-    #     self.session.event('check')
+        # First session
+        self.session.event('swipe')
+        time.sleep(2)
+        self.session.event('touch')
+        self.session.event('touch')
+        self.session.event('check')
+        time.sleep(3)  # touch/swipe times out
+        self.session.event('check')
 
-    #     self.assertEqual(self.session.times(), 'Session still active')
+        # Second session
+        self.session.event('check')
+        self.session.event('touch')
+        time.sleep(3)  # touch times out
+        self.session.event('check')
+        print(self.session.sessions)
 
-    # def test_sc_touch(self):
-    #     """ Test case #3 - testing for touch timeout """
+        session_length_1 = (self.session.sessions[0][1].replace(microsecond=0) -
+                           self.session.sessions[0][0].replace(microsecond=0))
 
-    #     self.session.event('touch')
-    #     self.assertTrue(self.session.in_progress())
-    #     self.session.event('touch')
-    #     time.sleep(2)
-    #     self.assertFalse(self.session.in_progress())
+        session_length_2 = (self.session.sessions[1][1].replace(microsecond=0) -
+                           self.session.sessions[1][0].replace(microsecond=0))
 
-    # def test_sc_swipe(self):
-    #     """ Test case #4 - active session (swipe did not timeout) """
+        self.assertEqual(session_length_1, timedelta(seconds=5))
+        self.assertEqual(session_length_2, timedelta(seconds=3))
 
-    #     self.session.event('swipe')
-    #     self.assertTrue(self.session.in_progress())
-    #     self.session.event('swipe')
-    #     time.sleep(5)
-    #     self.assertFalse(self.session.in_progress())
+    def test_sc_active_check(self):
+        """ Test case #3 - active session (unclosed check) """
 
-    # def test_sc_ghost_session(self):
-    #     """ Test case #5 - ghost session """
+        self.session.event('swipe')
+        time.sleep(2)
+        self.session.event('touch')
+        self.session.event('check')
+        time.sleep(1)  # swipe & touch time out
 
-    #     self.session.event('swipe')
-    #     time.sleep(4)  # swipe times out and no other events
+        self.assertTrue(self.session.in_progress())
 
-    #     self.assertEqual(self.session.times(), 'Ghost session')
+    def test_sc_touch(self):
+        """ Test case #4 - touch timeout """
 
-    # def test_sc_multiple_sessions(self):
-    #     """ Test case #6 - multiple sessions """
+        self.session.event('touch')
+        self.session.event('touch')
+        self.assertTrue(self.session.in_progress())
 
-    #     self.session.event('swipe')
-    #     self.session.event('touch')
-    #     time.sleep(1)
-    #     self.session.event('touch')
-    #     time.sleep(1)
-    #     self.session.event('touch')
-    #     time.sleep(1)
-    #     self.session.event('check')
-    #     time.sleep(1)
-    #     self.session.event('check')
-    #     self.assertFalse(self.session.in_progress())
+        self.session.event(' touch')
+        time.sleep(2)
+        self.assertFalse(self.session.in_progress())
 
-    #     self.session.event('swipe')
-    #     self.session.event('touch')
-    #     for i in range(12):
-    #         self.session.event('touch')
-    #         time.sleep(0.5)
-    #     self.assertTrue(self.session.in_progress())
+    def test_sc_swipe(self):
+        """ Test case #5 - swipe timeout) """
+
+        self.session.event('swipe')
+        self.assertTrue(self.session.in_progress())
+        self.session.event('swipe')
+        time.sleep(5)
+        self.assertFalse(self.session.in_progress())
+
+    def test_continuing_touches(self):
+        """ Test case #6 - continuing touch events """
+
+        for i in range(10):
+            self.session.event('touch')
+            time.sleep(0.9)
+            self.assertTrue(self.session.in_progress())
+
+        time.sleep(1)
+        self.assertFalse(self.session.in_progress())
+
+    def test_sc_mult_active_session(self):
+        """ Test case #7 - multiple session w/ active """
+
+        self.session.event('swipe')
+        time.sleep(2)
+        self.session.event('touch')
+        self.session.event('touch')
+        time.sleep(2)  # swipe times out
+        self.session.event('touch')
+        self.session.event('check')
+        time.sleep(3)  # touch times out
+        self.session.event('check')
+
+        session_length = (self.session.sessions[0][1].replace(microsecond=0) -
+                          self.session.sessions[0][0].replace(microsecond=0))
+
+        self.assertEqual(session_length, timedelta(seconds=7))
+
+        self.session.event('swipe')
+        self.session.event('touch')
+        self.session.event('check')
+
+        self.assertTrue(self.session.in_progress())
 
 
 if __name__ == '__main__':
