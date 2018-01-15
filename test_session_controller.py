@@ -1,5 +1,5 @@
 import unittest
-from session_controller_2 import SessionController
+from session_controller import SessionController
 import time
 from datetime import timedelta, datetime
 
@@ -29,11 +29,13 @@ class TestSessionController(unittest.TestCase):
         self.session.event('check')
         time.sleep(3)  # touch times out
         self.session.event('check')
+        time.sleep(3)
+        self.session.event('touch')
 
         session_length = (self.session.sessions[0][1].replace(microsecond=0) -
                           self.session.sessions[0][0].replace(microsecond=0))
 
-        self.assertEqual(session_length, timedelta(seconds=7))
+        self.assertEqual(session_length, timedelta(seconds=10))
 
     def test_sc_multiple_sessions(self):
         """ Test case #2 - multiple sessions """

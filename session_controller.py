@@ -8,52 +8,54 @@ class SessionController(object):
         """ Session tracker for Session Controller Class """
 
         self.sessions = []
-        self.swipe_timeout = 3
-        self.touch_timeout = 1
-        self.event_data = {'start': None}
+        self.event_timeouts = {'touch': 1, 'swipe': 3}
+        self.event_untimed = ['check']  # Note: data structure inconsistency?
+        self.event_data = {}  # Changing this so that the event start gets added to session
 
+    # TODO: possibly split event types into own method
     def event(self, event_type):
         """ Simulation of an event """
 
         now = datetime.now()
-        print(now)
 
         # Records beginning of session
-        if self.event_data['start'] is None:
-            self.event_data['start'] = now
+        if self.event_data == {}:
+            self.sessions.append(now)
 
-        # Records timestamp for touch/swipe events
-        if event_type == 'touch':
-            self.event_data[event_type] = now + timedelta(seconds=self.touch_timeout)
-        elif event_type == 'swipe':
-            self.event_data[event_type] = now + timedelta(seconds=self.swipe_timeout)
+        # Records timestamp for timed events
+        if event_type in self.event_timeouts:
+            self.event_data[event_type] = now + timedelta(seconds=self.event_timeouts[event_type])
 
-        # Removes timestamp if any existing touch/swipe events have timed out
-        if 'touch' in self.event_data and now > self.event_data['touch']:
-            del self.event_data['touch']
-
-        if 'swipe' in self.event_data and now > self.event_data['swipe']:
-            del self.event_data['swipe']
+        # Removes timestamp if any existing timed events have timed out
+        # Note: the runtime on this concerns me
+        # TODO: I would rather delete event based on timestamp
+        for event in self.event_timeouts:
+            if (event in self.event_timeouts and event in self.event_data and now > self.event_data[event]):
+                del self.event_data[event]
 
         # Check event is added if not in dict, otherwise deletes it
-        if event_type == 'check' and 'check' not in self.event_data:
+        if event_type in self.event_untimed and event_type not in self.event_data:
             self.event_data[event_type] = now
-        elif event_type == 'check' and 'check' in self.event_data:
-            del self.event_data['check']
+        elif event_type in self.event_untimed and event_type in self.event_data:
+            del self.event_data[event_type]
 
         # Process end of session
-        if len(self.event_data) == 1:
-            self.sessions.append((self.event_data['start'], now))
-            self.event_data = {'start': None}
-
-        print(self.event_data)
+        # TODO: record timeout event if final event in session
+        if len(self.event_data) == 0:
+            start = self.sessions.pop()
+            self.sessions.append((start, now))
+            self.event_data = {}
 
     def in_progress(self):
         """ Determines if session is still in progress """
 
-        if ('touch' in self.event_data and datetime.now() - self.event_data['touch'] < timedelta(seconds=0) or
-           'swipe' in self.event_data and datetime.now() - self.event_data['swipe'] < timedelta(seconds=0) or
+        # TODO: Fix so no hard coding of event types in method
+        if ('touch' in self.event_data and
+           datetime.now() - self.event_data['touch'] < timedelta(seconds=0) or
+           'swipe' in self.event_data and
+           datetime.now() - self.event_data['swipe'] < timedelta(seconds=0) or
            'check' in self.event_data):
+
             return True
         else:
             return False
@@ -64,7 +66,9 @@ class SessionController(object):
         session_count = 1
 
         for session in self.sessions:
-            print('Session {}:\nSession start: {}\nSession end: {}'.format(session_count, self.sessions[session_count-1][0], self.sessions[session_count-1][1]))
+            print('Session {}:\nStart: {}\nEnd: {}'.format(session_count,
+                                                           self.sessions[session_count-1][0],
+                                                           self.sessions[session_count-1][1]))
             session_count += 1
 
         if self.in_progress():
